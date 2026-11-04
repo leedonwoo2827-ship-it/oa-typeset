@@ -165,6 +165,8 @@ forms/
 }
 ```
 
+웹 화면(`run-studio.bat`)에서는 양식 카드의 **⬇ hwpx · docx · pptx · json · 전체 zip** 으로 기존 양식을 받아 고친 뒤, **[새 양식 넣기]** 로 새 이름을 붙여 올리면 됩니다(HTTP: `GET /api/forms/<이름>/download/<hwpx|docx|pptx|json|zip>`).
+
 양식을 찾는 순서는 ① `forms_dir` 인자 ② 환경변수 `OA_FORMS_DIR`(`;` 로 여러 개) ③ 현재 폴더의 `forms/` ④ 패키지에 든 기본 양식입니다.
 
 ## 5. HTML 작성 규칙

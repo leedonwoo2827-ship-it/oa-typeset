@@ -23,7 +23,9 @@
   .form.sel { border-color:var(--brand); background:var(--brand-wash); }
   .form b { display:block; margin-bottom:4px; }
   .form small { color:var(--muted); line-height:1.5; display:block; }
-  .kinds span { font-size:11px; border:1px solid var(--line); border-radius:4px; padding:1px 5px; margin-right:4px; background:#fff; }
+  .kinds { display:flex; flex-wrap:wrap; gap:4px; }
+  .kinds a.dl { font-size:11px; border:1px solid var(--line); border-radius:4px; padding:2px 6px; background:#fff; color:var(--ink); text-decoration:none; }
+  .kinds a.dl:hover { border-color:var(--brand); color:var(--brand); }
   .tabs { display:flex; gap:6px; margin-bottom:12px; }
   .tabs button { border:1px solid var(--line); background:#fff; padding:7px 14px; border-radius:8px; cursor:pointer; font:inherit; }
   .tabs button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
@@ -55,6 +57,8 @@
     <div class="forms" id="forms"></div>
     <details style="margin-top:12px">
       <summary class="hint">새 양식 넣기 (회사 .hwpx · .docx · .pptx)</summary>
+      <p class="hint">기존 양식 카드의 ⬇ 로 파일을 받아 한글·Word·PowerPoint 에서 고친 뒤 여기서 새 이름으로 올리면 됩니다.
+        한글은 <b>다른 이름으로 저장 → HWPX</b> 로 저장하세요. 스타일(F6) 이름을 바꾸면 짝이 자동으로 다시 잡힙니다.</p>
       <div class="row">
         <div><label>양식 이름</label><input type="text" id="fname" placeholder="예: 우리회사-보고서"></div>
         <div><label>파일 (여러 개 가능)</label><input type="file" id="ffiles" multiple accept=".hwpx,.docx,.pptx,.png"></div>
@@ -114,8 +118,12 @@ async function loadForms() {
   if (!form && fs.length) form = fs[0].name;
   $("#forms").innerHTML = fs.map(f => `<div class="form ${f.name===form?"sel":""}" data-name="${esc(f.name)}">
     <b>${esc(f.title)}</b><small>${esc(f.description)}</small>
-    <div class="kinds" style="margin-top:6px">${["hwpx","docx","pptx"].filter(k=>f[k]).map(k=>`<span>${k}</span>`).join("")}</div></div>`).join("");
-  document.querySelectorAll(".form").forEach(el => el.onclick = () => { form = el.dataset.name; loadForms(); });
+    <div class="kinds" style="margin-top:6px">
+      ${["hwpx","docx","pptx"].filter(k=>f[k]).map(k=>`<a class="dl" href="/api/forms/${encodeURIComponent(f.name)}/download/${k}" title="form.${k} 내려받기">⬇ ${k}</a>`).join("")}
+      <a class="dl" href="/api/forms/${encodeURIComponent(f.name)}/download/json" title="스타일 짝·집필 지침">⬇ json</a>
+      <a class="dl" href="/api/forms/${encodeURIComponent(f.name)}/download/zip" title="양식 폴더 통째로">⬇ 전체 zip</a>
+    </div></div>`).join("");
+  document.querySelectorAll(".form").forEach(el => el.onclick = (e) => { if (e.target.closest("a")) return; form = el.dataset.name; loadForms(); });
 }
 async function loadChips() {
   try {

@@ -101,6 +101,10 @@ def create_app():
     def forms_dir() -> Optional[str]:
         return str(USER_FORMS) if USER_FORMS.is_dir() else None
 
+    @app.exception_handler(FileNotFoundError)
+    async def not_found(request: Request, exc: FileNotFoundError):
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=404)
+
     @app.middleware("http")
     async def local_only(request: Request, call_next):
         # 로그인·집필은 이 PC 에서만(LAN 에 열어도 남이 LLM 계정을 쓰지 못하게). 조판·내려받기는 허용.
@@ -122,6 +126,30 @@ def create_app():
         f = get_form(name, forms_dir())
         p = f.file("hwpx")
         return {"styles": hwpx_styles(p) if p else [], "suggest": suggest_styles(p) if p else {}, "current": f.styles}
+
+    @app.get("/api/forms/{name}/download/{what}")
+    def api_form_download(name: str, what: str):
+        """양식 파일 내려받기 — what: hwpx | docx | pptx | json | zip(폴더 통째로).
+        받은 파일을 고쳐서 [새 양식 넣기]로 다시 올리면 새 양식이 된다."""
+        import io
+        from fastapi.responses import Response
+        f = get_form(name, forms_dir())
+        if what == "zip":
+            buf = io.BytesIO()
+            with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+                for p in sorted(f.dir.iterdir()):
+                    if p.is_file() and p.name.startswith(("form.", "logo_")):
+                        z.write(p, f"{f.name}/{p.name}")
+            from urllib.parse import quote
+            return Response(buf.getvalue(), media_type="application/zip",
+                            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(f.name)}.zip"})
+        if what not in ("hwpx", "docx", "pptx", "json"):
+            raise HTTPException(400, "hwpx · docx · pptx · json · zip 중 하나")
+        p = f.dir / f"form.{what}"
+        if not p.is_file():
+            raise HTTPException(404, f"이 양식에는 form.{what} 가 없습니다")
+        # 받는 파일 이름에 양식 이름을 붙인다 — 여러 양식을 받아도 헷갈리지 않게
+        return FileResponse(str(p), filename=f"{f.name}_form.{what}")
 
     @app.post("/api/forms/upload")
     async def api_form_upload(name: str = Form(...), files: List[UploadFile] = File(...)):
