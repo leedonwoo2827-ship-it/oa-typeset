@@ -63,6 +63,7 @@ def main(argv=None) -> int:
     fz.add_argument("path")
     fz.add_argument("--png", help="pptx 슬라이드 PNG 폴더")
     sub.add_parser("llm", help="LLM 로그인 상태")
+    sub.add_parser("setup-check", help="설치 직후 점검 — 양식·LLM 로그인 상태를 한글로 안내")
     st = sub.add_parser("studio", help="로컬 웹 화면")
     st.add_argument("--host", default="127.0.0.1")
     st.add_argument("--port", type=int, default=7090)
@@ -114,6 +115,8 @@ def main(argv=None) -> int:
         elif a.cmd == "llm":
             from . import llm
             _print(llm.status(), a.json)
+        elif a.cmd == "setup-check":
+            _setup_check()
         elif a.cmd == "studio":
             from .studio.app import run
             run(a.host, a.port)
@@ -124,6 +127,42 @@ def main(argv=None) -> int:
         else:
             print(f"실패: {e}", file=sys.stderr)
         return 1
+
+
+def _setup_check() -> None:
+    """setup.bat 끝에서 부른다. bat 파일에는 한글을 넣지 않으므로(cmd 가 UTF-8 bat 을 깨뜨림) 안내는 여기서 한다."""
+    import subprocess
+    from pathlib import Path
+
+    from . import llm
+    from .forms import list_forms
+    print("  양식: " + ", ".join(f.name for f in list_forms()))
+    st = llm.status()
+    for key, v in st.items():
+        mark = "로그인됨" if v.get("authenticated") else ("설치 안 됨" if not v.get("installed") else "로그인 필요")
+        print(f"  {v.get('label', key)}: {mark}" + (f" ({v['email']})" if v.get("email") and v.get("authenticated") else ""))
+    c = st.get("codex", {})
+    if c.get("installed") and not c.get("authenticated"):
+        # 설정 파일이 깨져 있으면 로그인도 실패한다 — 원인을 바로 보여 준다.
+        try:
+            from .llm.codex_auth import codex_path
+            p = subprocess.run([codex_path(), "login", "status"], capture_output=True, text=True,
+                               encoding="utf-8", errors="replace", timeout=20)
+            msg = (p.stdout + p.stderr).strip()
+        except Exception as e:  # noqa: BLE001
+            msg = str(e)
+        if "config" in msg.lower() and "error" in msg.lower():
+            cfg = Path.home() / ".codex" / "config.toml"
+            print(f"\n  ※ Codex 설정 파일 오류: {msg[:200]}")
+            print(f"    {cfg} 를 열어 그 줄의 경로를 감싼 큰따옴표 \"…\" 를 작은따옴표 '…' 로 바꾸세요.")
+            print("    (큰따옴표 안의 \\U 를 유니코드로 읽어서 생기는 오류입니다)")
+        else:
+            print("\n  Codex 로그인: 터미널에서  codex login")
+    elif not c.get("installed"):
+        print("\n  Codex 설치(선택): npm i -g @openai/codex  →  codex login")
+    if not st.get("claude", {}).get("authenticated"):
+        print("  Claude(선택): Claude Code 설치 후  claude auth login")
+    print("  조판만 쓸 거면 로그인은 필요 없습니다.")
 
 
 if __name__ == "__main__":
