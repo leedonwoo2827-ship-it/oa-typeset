@@ -140,14 +140,19 @@ curl -F "file=@book.zip" -F "form=교재형-46배판" -F "formats=hwpx,docx,pptx
 양식 하나는 폴더 하나입니다. **회사 양식을 넣으면 그 모양 그대로 조판됩니다.**
 
 ```
-forms/
-  교재형-46배판/            ← 기본 제공. 컴활 2급 교재를 만든 양식
-    form.hwpx               한글 양식: 글꼴·문단 스타일·쪽 설정·바탕쪽을 가져온다
-    form.docx               Word 양식: 'Heading 1~3'·'Normal' 등 명명 스타일
-    form.pptx               PowerPoint 시안: 배색 15색·글꼴을 가져온다
-    form.json               이름·판형·HTML↔스타일 짝·집필 지침
-  보고서형-A4/              ← 기본 제공. 계획서·보고서용 A4
+forms/<양식 이름>/
+  form.hwpx      한글 양식: 글꼴·문단 스타일·쪽 설정·바탕쪽을 가져온다
+  form.docx      Word 양식: 'Heading 1~3'·'Normal' 등 명명 스타일        (있으면)
+  form.pptx      PowerPoint 시안: 배색 15색·글꼴을 가져온다              (있으면)
+  form.json      이름·판형·HTML↔스타일 짝·집필 지침
 ```
+
+기본 제공 양식에는 **실제 원본이 있는 파일만** 들어 있습니다. 양식에 없는 형식을 고르면 엔진 기본 모양으로 만들고, 결과의 `notes` 에 그 사실을 적습니다.
+
+| 양식 | hwpx | docx | pptx |
+|---|---|---|---|
+| 교재형-46배판 | 컴활 2급 교재 양식 | (기본 모양) | (기본 모양) |
+| 보고서형-A4 | aim-local 보고서 양식 | (기본 모양) | aim-local 디자인 덱 시안 |
 
 **새 양식 만들기** — 자세한 내용은 [docs/양식_만들기.md](docs/양식_만들기.md) 에 있습니다.
 
@@ -269,4 +274,4 @@ tools/              시안(form.pptx) 다시 그리기 등 개발용
   - 목록에 글머리 기호·번호를 붙임
   - SVG 굽기를 재시도함
 - `engines/docx_gen · pptx_gen · hwpx_md · deck13`, `llm/codex_*`, `extractors.py` 는 사내 aim-local 의 문서 생산 스튜디오에서 조판·LLM 호출 부분만 떼어 왔습니다. 사업 관리·대시보드·사업별 레시피는 가져오지 않았습니다.
-- `forms/*/form.pptx` 에는 **Noto Sans KR**(SIL Open Font License 1.1) 글꼴이 임베드되어 있습니다.
+- `forms/보고서형-A4/form.pptx` 에는 **Noto Sans KR**(SIL Open Font License 1.1) 글꼴이 임베드되어 있습니다.

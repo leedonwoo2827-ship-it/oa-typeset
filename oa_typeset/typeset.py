@@ -57,8 +57,13 @@ def typeset(src: str, form: Union[str, Form, None] = None, formats: Iterable[str
         out = os.path.join(out_dir, f"{stem}.{fmt}")
         t0 = time.time()
         r: Dict[str, Any] = {"path": out, "notes": []}
+        if fmt in ("hwpx", "docx", "pptx") and not f.file(fmt):
+            # 양식에 이 형식 파일이 없다 — 엔진 기본 모양으로 만든다는 것을 알린다
+            r["notes"].append(f"양식 '{f.name}' 에 form.{fmt} 가 없어 기본 모양으로 만들었습니다")
         if fmt == "hwpx":
-            r.update(_hwpx(src, out, f, is_md, md, head))
+            h = _hwpx(src, out, f, is_md, md, head)
+            r["notes"] += h.pop("notes", [])
+            r.update(h)
             if finish:
                 r["notes"] += _finish_hwp(out, r)
         elif fmt == "docx":
