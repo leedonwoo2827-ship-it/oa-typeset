@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OA 조판 스튜디오</title>
+<style>
+  :root { --ink:#1d2433; --muted:#6b7280; --line:#e3e6ec; --bg:#f6f7f9; --card:#fff; --brand:#1f6b4a; --brand-wash:#e6f2ec; --warn:#b57f00; --err:#b42318; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "Pretendard","Malgun Gothic",system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:#16233a; color:#fff; padding:14px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; font-weight:700; }
+  .chips { display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; }
+  .chip { font-size:12px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.12); }
+  .chip.ok::before { content:"●"; color:#4ade80; margin-right:5px; }
+  .chip.no::before { content:"●"; color:#f87171; margin-right:5px; }
+  main { max-width:1080px; margin:20px auto; padding:0 16px; display:grid; gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
+  .card h2 { font-size:15px; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+  .step { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--brand); color:#fff; font-size:12px; }
+  .forms { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; }
+  .form { border:1.5px solid var(--line); border-radius:10px; padding:12px; cursor:pointer; }
+  .form.sel { border-color:var(--brand); background:var(--brand-wash); }
+  .form b { display:block; margin-bottom:4px; }
+  .form small { color:var(--muted); line-height:1.5; display:block; }
+  .kinds span { font-size:11px; border:1px solid var(--line); border-radius:4px; padding:1px 5px; margin-right:4px; background:#fff; }
+  .tabs { display:flex; gap:6px; margin-bottom:12px; }
+  .tabs button { border:1px solid var(--line); background:#fff; padding:7px 14px; border-radius:8px; cursor:pointer; font:inherit; }
+  .tabs button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  label { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; }
+  input[type=text], input[type=number], textarea, select { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:8px; font:inherit; background:#fff; }
+  textarea { min-height:90px; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:end; }
+  .row > * { flex:1; min-width:160px; }
+  .checks label { display:inline-flex; gap:6px; align-items:center; margin-right:14px; color:var(--ink); }
+  button.go { margin-top:14px; background:var(--brand); color:#fff; border:0; padding:10px 18px; border-radius:8px; font:inherit; font-weight:700; cursor:pointer; }
+  button.go:disabled { opacity:.5; cursor:wait; }
+  .out a { display:inline-block; margin:4px 8px 4px 0; padding:6px 12px; border:1px solid var(--brand); color:var(--brand); border-radius:8px; text-decoration:none; font-size:14px; }
+  .notes { font-size:13px; color:var(--warn); margin-top:6px; }
+  .err { color:var(--err); }
+  pre.log { background:#0f172a; color:#d1d5db; padding:12px; border-radius:8px; max-height:260px; overflow:auto; font-size:12px; white-space:pre-wrap; }
+  .hint { font-size:12px; color:var(--muted); }
+  @media (max-width:600px){ header{padding:12px 16px} .chips{margin-left:0} }
+</style>
+</head>
+<body>
+<header>
+  <h1>OA 조판 스튜디오</h1>
+  <span class="hint" style="color:#cbd5e1">HTML 원고 + 양식 → 한글 · Word · PowerPoint</span>
+  <div class="chips" id="chips"></div>
+</header>
+<main>
+  <section class="card">
+    <h2><span class="step">1</span> 양식 고르기</h2>
+    <div class="forms" id="forms"></div>
+    <details style="margin-top:12px">
+      <summary class="hint">새 양식 넣기 (회사 .hwpx · .docx · .pptx)</summary>
+      <div class="row">
+        <div><label>양식 이름</label><input type="text" id="fname" placeholder="예: 우리회사-보고서"></div>
+        <div><label>파일 (여러 개 가능)</label><input type="file" id="ffiles" multiple accept=".hwpx,.docx,.pptx,.png"></div>
+      </div>
+      <button class="go" id="fup">양식 저장</button> <span id="fmsg" class="hint"></span>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2><span class="step">2</span> 원고</h2>
+    <div class="tabs"><button class="on" data-tab="have">HTML 원고가 있다</button><button data-tab="write">자료로 LLM 이 쓴다</button></div>
+
+    <div id="tab-have">
+      <label>원고 파일 — .html (그림이 있으면 그림 폴더까지 .zip 으로 묶어서) 또는 .md</label>
+      <input type="file" id="src" accept=".html,.htm,.md,.zip">
+    </div>
+
+    <div id="tab-write" hidden>
+      <label>무엇을, 누구에게 쓰나</label>
+      <textarea id="brief" placeholder="예: 변액보험 판매관리사 시험 요약집. 수험생 대상. 장마다 핵심 표와 기출 포인트."></textarea>
+      <label>자료 (pdf · hwp · hwpx · docx · xlsx · pptx · txt)</label>
+      <input type="file" id="sources" multiple>
+      <div class="row">
+        <div><label>분량(쪽)</label><input type="number" id="pages" placeholder="양식 기본값"></div>
+        <div><label>LLM</label><select id="provider"><option value="codex">Codex (ChatGPT 로그인) — 기본</option><option value="claude">Claude (구독 로그인)</option><option value="auto">자동 (Codex 실패 시 Claude)</option></select></div>
+      </div>
+      <p class="hint">장마다 저장하며 씁니다. 70쪽이면 수십 분 걸립니다 — 창을 닫아도 서버가 켜져 있으면 계속됩니다.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="step">3</span> 조판</h2>
+    <div class="checks">
+      <label><input type="checkbox" value="hwpx" checked> 한글 hwpx</label>
+      <label><input type="checkbox" value="docx" checked> Word docx</label>
+      <label><input type="checkbox" value="pptx"> PowerPoint pptx</label>
+      <label><input type="checkbox" id="finish"> Office 마무리 (끝줄 정리 · 한글 PDF — 이 PC 에 Office 필요)</label>
+    </div>
+    <button class="go" id="go">조판하기</button>
+    <div class="out" id="out"></div>
+    <pre class="log" id="log" hidden></pre>
+  </section>
+
+  <section class="card">
+    <h2>최근 작업</h2>
+    <div id="jobs" class="out"></div>
+  </section>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+let form = "", tab = "have";
+async function j(url, opt) { const r = await fetch(url, opt); return r.json(); }
+function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+async function loadForms() {
+  const fs = await j("/api/forms");
+  if (!form && fs.length) form = fs[0].name;
+  $("#forms").innerHTML = fs.map(f => `<div class="form ${f.name===form?"sel":""}" data-name="${esc(f.name)}">
+    <b>${esc(f.title)}</b><small>${esc(f.description)}</small>
+    <div class="kinds" style="margin-top:6px">${["hwpx","docx","pptx"].filter(k=>f[k]).map(k=>`<span>${k}</span>`).join("")}</div></div>`).join("");
+  document.querySelectorAll(".form").forEach(el => el.onclick = () => { form = el.dataset.name; loadForms(); });
+}
+async function loadChips() {
+  try {
+    const s = await j("/api/llm/status");
+    $("#chips").innerHTML = Object.entries(s).map(([k,v]) =>
+      `<span class="chip ${v.authenticated?"ok":"no"}" title="${v.authenticated?"로그인됨":"터미널에서: "+esc(v.login||"")}">${esc(v.label)}${v.email?" · "+esc(v.email):""}</span>`).join("");
+  } catch(e) {}
+}
+async function loadJobs() {
+  const js = await j("/api/jobs");
+  $("#jobs").innerHTML = js.length ? js.map(x => `<div style="margin:6px 0"><span class="hint">${esc(x.job)} · ${esc(x.status)}</span><br>` +
+    Object.entries(x.files).filter(([n]) => !n.startsWith("work/chapters")).map(([n,u]) => `<a href="${u}" target="_blank">${esc(n.split("/").pop())}</a>`).join("") + "</div>").join("")
+    : '<span class="hint">아직 없음</span>';
+}
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  $("#tab-have").hidden = tab !== "have"; $("#tab-write").hidden = tab !== "write";
+});
+$("#fup").onclick = async () => {
+  const fd = new FormData(); fd.append("name", $("#fname").value || "새양식");
+  for (const f of $("#ffiles").files) fd.append("files", f);
+  const r = await j("/api/forms/upload", {method:"POST", body:fd});
+  $("#fmsg").textContent = r.ok ? `저장: ${r.saved.join(", ")} · 스타일 짝 ${JSON.stringify(r.styles||{})}` : (r.error||"실패");
+  form = r.form || form; loadForms();
+};
+function formats() { return [...document.querySelectorAll(".checks input[type=checkbox][value]")].filter(c=>c.checked).map(c=>c.value).join(","); }
+function showFiles(files, notes) {
+  $("#out").innerHTML = Object.entries(files||{}).map(([k,u]) => `<a href="${u}" target="_blank">${esc(k.split("/").pop())}</a>`).join("") +
+    (notes && notes.length ? `<div class="notes">${notes.map(esc).join("<br>")}</div>` : "");
+}
+$("#go").onclick = async () => {
+  const btn = $("#go"); btn.disabled = true; $("#out").innerHTML = ""; $("#log").hidden = true;
+  try {
+    if (tab === "have") {
+      const f = $("#src").files[0]; if (!f) { alert("원고 파일을 고르세요"); return; }
+      const fd = new FormData(); fd.append("file", f); fd.append("form", form); fd.append("formats", formats());
+      fd.append("finish", $("#finish").checked ? "1" : "0");
+      btn.textContent = "조판 중…";
+      const r = await j("/api/typeset", {method:"POST", body:fd});
+      if (!r.ok) { $("#out").innerHTML = `<span class="err">${esc(r.error)}</span>`; return; }
+      const notes = Object.values(r.result).flatMap(v => (v && v.notes) || []);
+      showFiles(r.files, notes);
+    } else {
+      if (!$("#brief").value.trim()) { alert("무엇을 쓸지 적어 주세요"); return; }
+      const fd = new FormData(); fd.append("brief", $("#brief").value); fd.append("form", form);
+      fd.append("pages", $("#pages").value || "0"); fd.append("provider", $("#provider").value); fd.append("formats", formats());
+      for (const f of $("#sources").files) fd.append("files", f);
+      const r = await j("/api/write", {method:"POST", body:fd});
+      if (!r.ok) { $("#out").innerHTML = `<span class="err">${esc(r.error)}</span>`; return; }
+      $("#log").hidden = false; btn.textContent = "집필 중…";
+      while (true) {
+        await new Promise(res => setTimeout(res, 3000));
+        const s = await j("/api/jobs/" + r.job);
+        $("#log").textContent = (s.log||[]).join("\n"); $("#log").scrollTop = 1e9;
+        if (s.status !== "running") {
+          showFiles(Object.fromEntries(Object.entries(s.files||{}).filter(([n]) => !n.includes("chapters/"))), s.error ? ["실패: " + s.error] : []);
+          break;
+        }
+      }
+    }
+  } finally { btn.disabled = false; btn.textContent = "조판하기"; loadJobs(); }
+};
+loadForms(); loadChips(); loadJobs();
+</script>
+</body>
+</html>

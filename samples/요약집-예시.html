@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>스프레드시트 기초 요약집</title>
+<style>
+  body { font-family: "Malgun Gothic", sans-serif; max-width: 760px; margin: 40px auto; line-height: 1.7; color: #222; }
+  h1 { border-bottom: 3px solid #2F6DB5; padding-bottom: 6px; }
+  h1.chapter { break-before: page; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #999; padding: 4px 8px; }
+  th { background: #F2F2F2; }
+  .muted { color: #666; font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<h1>스프레드시트 기초 요약집</h1>
+<p class="muted">이 문서는 oa-typeset 의 조판 견본이다. 장·절·항·표·목록·그림이 한글·Word·PowerPoint 에서 어떻게 옮겨지는지 보여 준다.</p>
+
+<h1 class="chapter" style="break-before:page">1장. 셀과 참조</h1>
+
+<h2>1. 셀 주소의 구성</h2>
+<p>스프레드시트의 셀은 <b>열 문자</b>와 <b>행 번호</b>를 이어 붙인 주소로 가리킨다. A열 1행의 셀은 A1 이고, 범위는 콜론으로 이어 <b>A1:C5</b> 처럼 쓴다. 다른 시트의 셀은 시트 이름 뒤에 느낌표를 붙여 <b>Sheet2!B3</b> 처럼 적는다.</p>
+
+<h3>(1) 참조 방식</h3>
+<p>수식을 다른 셀로 복사하면 참조 주소가 따라 움직인다. 움직이지 않게 하려면 열이나 행 앞에 <b>$</b> 를 붙인다.</p>
+<p><img src="img/ref.svg" alt="참조 방식 세 가지" style="width:150mm"></p>
+
+<table>
+  <tr><th>방식</th><th>표기</th><th>복사할 때</th><th>쓰는 곳</th></tr>
+  <tr><td>상대 참조</td><td>A1</td><td>열·행 모두 바뀐다</td><td>같은 계산을 줄마다 반복</td></tr>
+  <tr><td>절대 참조</td><td>$A$1</td><td>바뀌지 않는다</td><td>세율·환율처럼 고정된 값</td></tr>
+  <tr><td>혼합 참조</td><td>$A1, A$1</td><td>$ 가 없는 쪽만 바뀐다</td><td>구구단표처럼 행·열 교차 계산</td></tr>
+</table>
+
+<h3>(2) 이름 정의</h3>
+<p>자주 쓰는 셀이나 범위에 이름을 붙이면 수식이 읽기 쉬워진다.</p>
+<ul>
+  <li>이름은 문자나 밑줄로 시작하고, 공백을 넣을 수 없다.</li>
+  <li>셀 주소와 같은 모양(A1, R1C1)은 이름으로 쓸 수 없다.</li>
+  <li>이름은 기본적으로 통합 문서 전체에서 쓸 수 있다.</li>
+</ul>
+
+<h2>2. 자주 나오는 오류 값</h2>
+<p>수식이 계산되지 못하면 셀에 오류 값이 나타난다. 오류의 뜻을 알면 원인을 빨리 찾을 수 있다.</p>
+<table>
+  <tr><th>오류 값</th><th>뜻</th><th>대표 원인</th></tr>
+  <tr><td>#DIV/0!</td><td>0으로 나눔</td><td>나누는 셀이 비었거나 0</td></tr>
+  <tr><td>#N/A</td><td>값을 찾을 수 없음</td><td>찾기 함수에서 일치하는 값이 없음</td></tr>
+  <tr><td>#NAME?</td><td>모르는 이름</td><td>함수 이름 오타, 정의하지 않은 이름</td></tr>
+  <tr><td>#REF!</td><td>잘못된 참조</td><td>참조하던 셀을 삭제함</td></tr>
+  <tr><td>#VALUE!</td><td>잘못된 값의 형식</td><td>숫자 자리에 문자를 넣음</td></tr>
+</table>
+
+<h1 class="chapter" style="break-before:page">2장. 함수</h1>
+
+<h2>1. 함수의 기본 형식</h2>
+<p>함수는 <b>=함수이름(인수1, 인수2, …)</b> 의 꼴로 쓴다. 인수에는 값, 셀 주소, 범위, 다른 함수가 들어갈 수 있다. 함수 안에 함수를 넣는 것을 <b>중첩</b>이라 한다.</p>
+
+<h3>(1) 통계 함수</h3>
+<table>
+  <tr><th>함수</th><th>하는 일</th><th>예</th></tr>
+  <tr><td>SUM</td><td>합계</td><td>=SUM(B2:B10)</td></tr>
+  <tr><td>AVERAGE</td><td>평균</td><td>=AVERAGE(B2:B10)</td></tr>
+  <tr><td>COUNTIF</td><td>조건에 맞는 셀 개수</td><td>=COUNTIF(C2:C10,"&gt;=80")</td></tr>
+  <tr><td>RANK.EQ</td><td>순위</td><td>=RANK.EQ(B2,$B$2:$B$10)</td></tr>
+</table>
+
+<h3>(2) 찾기 함수</h3>
+<p>표에서 값을 찾아 다른 열의 값을 돌려준다. 첫 열에서 찾는 VLOOKUP 이 가장 많이 쓰인다.</p>
+<ol>
+  <li>찾을 값을 정한다.</li>
+  <li>찾을 범위를 절대 참조로 고정한다.</li>
+  <li>돌려받을 열 번호를 적는다.</li>
+  <li>정확히 일치하는 값만 찾으려면 마지막 인수에 FALSE(또는 0)를 쓴다.</li>
+</ol>
+
+<h4>1) 자주 하는 실수</h4>
+<p>찾을 범위를 상대 참조로 두고 수식을 아래로 복사하면 범위가 한 줄씩 내려가 아래쪽에서 #N/A 가 난다. 범위는 <b>$A$2:$D$50</b> 처럼 고정한다.</p>
+
+<h2>2. 정리</h2>
+<ul>
+  <li>참조는 상대·절대·혼합 세 가지이며 F4 로 바꾼다.</li>
+  <li>오류 값은 원인이 정해져 있다 — 뜻부터 확인한다.</li>
+  <li>찾기 함수의 범위는 반드시 고정한다.</li>
+</ul>
+
+</body>
+</html>

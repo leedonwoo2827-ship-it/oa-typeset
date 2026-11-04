@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200" viewBox="0 0 600 200" font-family="Malgun Gothic, sans-serif">
+  <rect width="600" height="200" fill="#ffffff"/>
+  <g font-size="18">
+    <rect x="20" y="60" width="160" height="80" rx="10" fill="#E8F1FB" stroke="#2F6DB5" stroke-width="2"/>
+    <text x="100" y="95" text-anchor="middle" fill="#1F3A5F" font-weight="bold">상대 참조</text>
+    <text x="100" y="122" text-anchor="middle" fill="#333">A1</text>
+    <rect x="220" y="60" width="160" height="80" rx="10" fill="#FDF0E6" stroke="#C66A1E" stroke-width="2"/>
+    <text x="300" y="95" text-anchor="middle" fill="#7A3E0C" font-weight="bold">절대 참조</text>
+    <text x="300" y="122" text-anchor="middle" fill="#333">$A$1</text>
+    <rect x="420" y="60" width="160" height="80" rx="10" fill="#EAF6EE" stroke="#2E8B57" stroke-width="2"/>
+    <text x="500" y="95" text-anchor="middle" fill="#1E5E3A" font-weight="bold">혼합 참조</text>
+    <text x="500" y="122" text-anchor="middle" fill="#333">$A1 · A$1</text>
+  </g>
+  <text x="300" y="30" text-anchor="middle" font-size="16" fill="#555">F4 키를 누를 때마다 차례로 바뀐다</text>
+  <path d="M180 100 H220 M380 100 H420" stroke="#888" stroke-width="2" marker-end="url(#a)"/>
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#888"/></marker></defs>
+</svg>

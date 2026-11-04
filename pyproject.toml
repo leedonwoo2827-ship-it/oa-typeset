@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oa-typeset"
+version = "0.1.0"
+description = "HTML 원고 + 양식(샘플) → 한글(hwpx) · Word(docx) · PowerPoint(pptx) 조판. LLM 집필은 Codex/Claude 로그인으로."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "python-docx>=1.1",
+  "python-pptx>=0.6.23",
+  "lxml>=4.9",
+  "Pillow>=10",
+]
+
+[project.optional-dependencies]
+# 자료 읽기(집필용): pdf · hwp · xlsx
+write = ["pdfplumber", "pypdf", "olefile", "openpyxl"]
+# 로컬 웹 스튜디오
+studio = ["fastapi", "uvicorn", "python-multipart", "pdfplumber", "pypdf", "olefile", "openpyxl"]
+# 실제 PowerPoint·한글로 마무리(끝줄 정리·PDF) — Windows 전용
+office = ["pywin32; platform_system == 'Windows'"]
+all = ["fastapi", "uvicorn", "python-multipart", "pdfplumber", "pypdf", "olefile", "openpyxl",
+       "pywin32; platform_system == 'Windows'"]
+
+[project.scripts]
+oa-typeset = "oa_typeset.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["oa_typeset*"]
+
+[tool.setuptools.package-data]
+oa_typeset = ["forms/*/*", "studio/static/*", "assets/**/*"]

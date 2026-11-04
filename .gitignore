@@ -1,0 +1,26 @@
+# 작업물·개인 자료 — 공개 레포에 올리지 않는다
+_context/
+data/
+work/
+out/
+!samples/out/
+*.log
+.claude/
+.codex/
+
+# 파이썬
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# 기타
+.DS_Store
+Thumbs.db
+~$*
+
+# 덱 임베드용 정적 TTF (tools/build_fonts.py 가 만든다)
+oa_typeset/assets/fonts/
