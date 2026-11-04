@@ -11,7 +11,29 @@
   header { background:#16233a; color:#fff; padding:14px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
   header h1 { font-size:18px; margin:0; font-weight:700; }
   .chips { display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; }
-  .chip { font-size:12px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.12); }
+  .chip { font-size:12px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.12); cursor:pointer; border:0; color:#fff; font-family:inherit; }
+  .chip:hover { background:rgba(255,255,255,.22); }
+  .gear { font:inherit; font-size:12px; padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.35); background:transparent; color:#fff; cursor:pointer; }
+  .gear:hover { background:rgba(255,255,255,.12); }
+  dialog#llmdlg { border:0; border-radius:14px; padding:0; width:min(560px, calc(100vw - 32px)); box-shadow:0 20px 60px rgba(0,0,0,.3); color:var(--ink); }
+  dialog#llmdlg::backdrop { background:rgba(15,23,42,.45); }
+  .dlg-head { display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .dlg-head .x { margin-left:auto; border:0; background:none; font-size:16px; cursor:pointer; color:var(--muted); }
+  .dlg-foot { display:flex; align-items:center; gap:10px; padding:12px 18px; border-top:1px solid var(--line); }
+  .dlg-foot .btn { margin-left:auto; }
+  .prov { padding:14px 18px; border-bottom:1px solid var(--line); }
+  .prov:last-child { border-bottom:0; }
+  .prov .top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .badge { font-size:12px; padding:2px 8px; border-radius:999px; }
+  .badge.ok { background:#e7f6ec; color:#17663a; } .badge.no { background:#fdecec; color:#a32020; } .badge.na { background:#eef0f3; color:#555; }
+  .prov .acts { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .btn { font:inherit; font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; color:var(--ink); }
+  .btn:hover { border-color:var(--ink); }
+  .btn.pri { background:var(--brand); color:#fff; border-color:var(--brand); }
+  .btn.warn { background:#fff7e6; border-color:#e8b44a; color:#7a5200; }
+  .btn:disabled { opacity:.5; cursor:wait; }
+  .prov .msg { font-size:12px; color:var(--muted); margin-top:6px; white-space:pre-wrap; word-break:break-all; }
+  .prov .cfg { font-size:12px; background:#fff7e6; border:1px solid #f1d39a; border-radius:8px; padding:8px 10px; margin-top:8px; color:#6b4a00; }
   .chip.ok::before { content:"●"; color:#4ade80; margin-right:5px; }
   .chip.no::before { content:"●"; color:#f87171; margin-right:5px; }
   main { max-width:1080px; margin:20px auto; padding:0 16px; display:grid; gap:16px; }
@@ -50,7 +72,18 @@
   <h1>OA 조판 스튜디오</h1>
   <span class="hint" style="color:#cbd5e1">HTML 원고 + 양식 → 한글 · Word · PowerPoint</span>
   <div class="chips" id="chips"></div>
+  <button class="gear" id="gear" title="LLM 연결 설정">⚙ LLM 연결</button>
 </header>
+
+<dialog id="llmdlg">
+  <div class="dlg-head"><b>LLM 연결</b><span class="hint">API 키 없이, 이 PC 에 로그인한 계정으로 씁니다</span>
+    <button class="x" onclick="llmdlg.close()" aria-label="닫기">✕</button></div>
+  <div id="llmrows"></div>
+  <div class="dlg-foot">
+    <span id="llmmsg" class="hint"></span>
+    <button class="btn" id="llmrefresh">↻ 새로고침</button>
+  </div>
+</dialog>
 <main>
   <section class="card">
     <h2><span class="step">1</span> 양식 고르기</h2>
@@ -125,13 +158,51 @@ async function loadForms() {
     </div></div>`).join("");
   document.querySelectorAll(".form").forEach(el => el.onclick = (e) => { if (e.target.closest("a")) return; form = el.dataset.name; loadForms(); });
 }
+let llmState = {};
 async function loadChips() {
   try {
-    const s = await j("/api/llm/status");
-    $("#chips").innerHTML = Object.entries(s).map(([k,v]) =>
-      `<span class="chip ${v.authenticated?"ok":"no"}" title="${v.authenticated?"로그인됨":"터미널에서: "+esc(v.login||"")}">${esc(v.label)}${v.email?" · "+esc(v.email):""}</span>`).join("");
+    llmState = await j("/api/llm/status");
+    $("#chips").innerHTML = Object.entries(llmState).map(([k,v]) =>
+      `<button class="chip ${v.authenticated?"ok":"no"}" data-p="${k}" title="눌러서 로그인·로그아웃">${esc(v.label)}${v.authenticated && v.email?" · "+esc(v.email):""}</button>`).join("");
+    document.querySelectorAll(".chip").forEach(b => b.onclick = openLLM);
+    if (llmdlg.open) renderLLM();
   } catch(e) {}
 }
+function renderLLM() {
+  $("#llmrows").innerHTML = Object.entries(llmState).map(([k,v]) => {
+    const badge = !v.installed ? '<span class="badge na">설치 안 됨</span>'
+                : v.authenticated ? '<span class="badge ok">로그인됨</span>' : '<span class="badge no">로그인 필요</span>';
+    const acts = !v.installed ? `<div class="msg">설치: ${k==="codex" ? "npm i -g @openai/codex" : "Claude Code 설치 (claude.com/code)"}</div>` :
+      `<div class="acts">
+        ${v.config_error ? `<button class="btn warn" data-act="fix" data-p="${k}">설정 오류 고치기</button>` : ""}
+        <button class="btn ${v.authenticated?"":"pri"}" data-act="login" data-p="${k}" ${v.config_error?"disabled title='먼저 설정 오류를 고치세요'":""}>${v.authenticated?"다시 로그인 (계정 바꾸기)":"로그인"}</button>
+        <button class="btn" data-act="logout" data-p="${k}" ${v.authenticated?"":"disabled"}>로그아웃</button>
+      </div>`;
+    const cfg = v.config_error ? `<div class="cfg">Codex 설정 파일(<code>~/.codex/config.toml</code>)에 오류가 있어 Codex 가 실행되지 않습니다.<br>
+      큰따옴표 안의 윈도우 경로(\\U…)를 유니코드로 읽어서 생기는 흔한 오류입니다. [설정 오류 고치기] 는 그 경로만 작은따옴표로 바꾸고, 원래 파일은 백업으로 남깁니다.</div>` : "";
+    const msg = !v.authenticated && v.message && !v.config_error ? `<div class="msg">${esc(v.message)}</div>` : "";
+    return `<div class="prov"><div class="top"><b>${esc(v.label)}</b>${badge}${v.authenticated && v.email ? `<span class="hint">${esc(v.email)}</span>` : ""}
+      ${k==="codex" ? '<span class="hint">· 기본</span>' : '<span class="hint">· 보조</span>'}</div>${cfg}${msg}${acts}</div>`;
+  }).join("");
+  document.querySelectorAll("#llmrows [data-act]").forEach(b => b.onclick = () => llmAct(b));
+}
+async function openLLM() { renderLLM(); llmdlg.showModal(); $("#llmmsg").textContent = "확인 중…"; await loadChips(); $("#llmmsg").textContent = ""; }
+async function llmAct(b) {
+  const p = b.dataset.p, act = b.dataset.act;
+  if (act === "logout" && !confirm(`${llmState[p].label} 에서 로그아웃할까요?`)) return;
+  if (act === "fix" && !confirm("~/.codex/config.toml 의 경로 따옴표를 고칩니다(원본은 백업). 진행할까요?")) return;
+  b.disabled = true;
+  const url = act === "fix" ? "/api/llm/codex/fix-config" : `/api/llm/${p}/${act}`;
+  try {
+    const r = await j(url, {method:"POST"});
+    $("#llmmsg").textContent = r.message || r.error || "";
+    if (r.status) { llmState = r.status; renderLLM(); loadChips(); }
+  } catch(e) { $("#llmmsg").textContent = "실패: " + e; }
+  finally { b.disabled = false; }
+}
+$("#gear").onclick = openLLM;
+$("#llmrefresh").onclick = async () => { $("#llmmsg").textContent = "확인 중…"; await loadChips(); renderLLM(); $("#llmmsg").textContent = "새로고침했습니다"; };
+window.addEventListener("focus", () => { if (llmdlg.open) loadChips(); });   // 로그인 창에서 돌아오면 자동 확인
 async function loadJobs() {
   const js = await j("/api/jobs");
   $("#jobs").innerHTML = js.length ? js.map(x => `<div style="margin:6px 0"><span class="hint">${esc(x.job)} · ${esc(x.status)}</span><br>` +

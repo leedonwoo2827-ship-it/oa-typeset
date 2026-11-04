@@ -109,7 +109,9 @@ def create_app():
     async def local_only(request: Request, call_next):
         # 로그인·집필은 이 PC 에서만(LAN 에 열어도 남이 LLM 계정을 쓰지 못하게). 조판·내려받기는 허용.
         host = request.client.host if request.client else ""
-        if request.url.path.startswith(("/api/write", "/api/forms/upload")) and host not in ("127.0.0.1", "::1", "localhost"):
+        local_only_path = request.url.path.startswith(("/api/write", "/api/forms/upload")) or (
+            request.url.path.startswith("/api/llm/") and request.method == "POST")
+        if local_only_path and host not in ("127.0.0.1", "::1", "localhost", "testclient"):
             return JSONResponse({"ok": False, "error": "이 기능은 이 PC 에서만 쓸 수 있습니다"}, status_code=403)
         return await call_next(request)
 
@@ -175,6 +177,26 @@ def create_app():
     @app.get("/api/llm/status")
     def api_llm_status():
         return llm.status()
+
+    @app.post("/api/llm/{provider}/login")
+    def api_llm_login(provider: str):
+        if provider not in llm.PROVIDERS:
+            raise HTTPException(400, "codex | claude")
+        cmd = llm.open_login(provider)
+        return {"ok": True, "message": f"새 창에서 '{cmd}' 를 열었습니다. 브라우저 로그인을 마친 뒤 [새로고침] 을 누르세요."}
+
+    @app.post("/api/llm/{provider}/logout")
+    def api_llm_logout(provider: str):
+        if provider not in llm.PROVIDERS:
+            raise HTTPException(400, "codex | claude")
+        return {"ok": True, "message": llm.logout(provider), "status": llm.status()}
+
+    @app.post("/api/llm/codex/fix-config")
+    def api_llm_fix_codex():
+        r = llm.fix_codex_config()
+        msg = (f"{r['changed']}곳 고쳤습니다. 원래 파일은 {r['backup']} 에 남겼습니다." if r["changed"]
+               else "고칠 곳을 찾지 못했습니다(경로가 든 큰따옴표 문자열이 없음). 오류 메시지의 줄을 직접 확인하세요.")
+        return {"ok": True, "message": msg, "result": r, "status": llm.status()}
 
     @app.post("/api/typeset")
     async def api_typeset(file: UploadFile = File(...), form: str = Form(""), formats: str = Form("hwpx"),
